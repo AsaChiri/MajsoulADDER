@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Python unit tests (Windows)
+    runs-on: windows-2022
+    timeout-minutes: 15
+    env:
+      # Tests inject fake clickers/listeners; never connect to real input devices.
+      PYNPUT_BACKEND: dummy
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.21"
+          enable-cache: false
+
+      - name: Install Python from .python-version
+        run: uv python install
+
+      - name: Install locked dependencies
+        run: uv sync --locked --dev
+
+      - name: Run unit tests
+        # No application launch, GUI automation, or external service integration.
+        run: uv run --frozen pytest
+        env:
+          UV_OFFLINE: "true"
