@@ -28,6 +28,10 @@ uv run pytest
 4. Tick **Show overlay** to draw numbered circles at each position.
 5. Press **Start** (`F7`) to loop. **Pause/Resume** is `F8`, **Stop** is `F9`.
 
+Stop playback with `F9` before adding or re-recording positions, including when paused.
+Start and Resume are ignored during capture. Append capture continues until `Esc`
+or right-click; Re-record finishes after one left-click replaces the selected row.
+
 ### Settings
 
 - **Interval (ms)** — delay between clicks within one pass of the sequence.

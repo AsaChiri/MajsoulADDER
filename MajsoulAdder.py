@@ -327,7 +327,7 @@ def _is_esc_key(key) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Tk / pynput glue (not unit-tested; exercised by manual verification)
+# Tk / pynput glue (App actions tested with mocked UI and input devices)
 # ---------------------------------------------------------------------------
 
 
@@ -582,10 +582,13 @@ class App:
         state = worker.state if worker else ClickWorker.IDLE
         has_rows = len(self.model) > 0
         self.btn_start.configure(
-            state=("normal" if state == ClickWorker.IDLE and has_rows else "disabled")
+            state=("normal" if state == ClickWorker.IDLE and has_rows
+                   and not self.capture.active else "disabled")
         )
         if state == ClickWorker.PAUSED:
-            self.btn_pause.configure(text="Resume", state="normal")
+            self.btn_pause.configure(
+                text="Resume", state="disabled" if self.capture.active else "normal"
+            )
         elif state == ClickWorker.RUNNING:
             self.btn_pause.configure(text="Pause", state="normal")
         else:
@@ -604,6 +607,10 @@ class App:
     def _add(self) -> None:
         if self.capture.active:
             return
+        # A paused worker still owns playback and can be resumed with F8.
+        if self._worker and self._worker.state != ClickWorker.IDLE:
+            self._set_status("Stop playback (F9) before capturing positions")
+            return
         self.var_overlay.set(True)
         if self.overlay:
             self.overlay.show()
@@ -619,6 +626,9 @@ class App:
     def _re_record(self) -> None:
         i = self._selected_index()
         if i is None or self.capture.active:
+            return
+        if self._worker and self._worker.state != ClickWorker.IDLE:
+            self._set_status("Stop playback (F9) before capturing positions")
             return
         if self.overlay:
             self.overlay.show()
@@ -712,6 +722,8 @@ class App:
         self._controller.click(mouse.Button.left)
 
     def _start(self) -> None:
+        if self.capture.active:
+            return
         if self._worker and self._worker.state != ClickWorker.IDLE:
             return
         snapshot = self.model.snapshot()
@@ -735,7 +747,7 @@ class App:
         if self._worker.state == ClickWorker.RUNNING:
             self._worker.pause()
             self._set_status("Paused")
-        elif self._worker.state == ClickWorker.PAUSED:
+        elif self._worker.state == ClickWorker.PAUSED and not self.capture.active:
             self._worker.resume()
 
     def _stop(self) -> None:
